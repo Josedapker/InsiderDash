@@ -20,12 +20,13 @@ const formatDate = (timestamp: string) => {
   });
 };
 
-const renderEmoji = (action: string) => {
+const renderEmoji = (action: string | null | undefined) => {
+  if (!action) return ''; // Return an empty string or a default emoji if action is null or undefined
   if (action.includes('BUY')) return '🟢';
   if (action.includes('SELL')) return '🔴';
   if (action.includes('TRANSFER')) return '💸';
   if (action.includes('SWAP')) return '🔁';
-  return '';
+  return ''; // Default case
 };
 
 const TradeCard: React.FC<TradeCardProps> = ({ trade, onCopyClick, copySuccess }) => {
@@ -51,8 +52,13 @@ const TradeCard: React.FC<TradeCardProps> = ({ trade, onCopyClick, copySuccess }
       <div className="flex-1">
         <div className="flex items-center mb-2">
           <span className="text-2xl mr-2">{renderEmoji(action)}</span>
-          <span className={`font-bold ${action.includes('SELL') ? 'text-red-500' : action.includes('BUY') ? 'text-green-500' : action.includes('TRANSFER') ? 'text-yellow-500' : 'text-blue-500'}`}>
-            {action.replace(/🟢|🔴|💸|🔁/, '').trim()}
+          <span className={`font-bold ${
+            action?.includes('SELL') ? 'text-red-500' : 
+            action?.includes('BUY') ? 'text-green-500' : 
+            action?.includes('TRANSFER') ? 'text-yellow-500' : 
+            'text-blue-500'
+          }`}>
+            {action?.replace(/🟢|🔴|💸|🔁/, '').trim() || 'Unknown Action'}
           </span>
         </div>
         <p className="font-bold text-lg">{token} {platform}</p>

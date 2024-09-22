@@ -13,7 +13,7 @@ import re
 from telethon.tl.types import MessageEntityTextUrl
 
 # Load environment variables from .env.local
-load_dotenv('/Users/jose/Desktop/ExperimentalScripts/NEW/InsidersDashboard/.env.local')
+load_dotenv('/Users/jose/Desktop/ExperimentalScripts/NEW/InsidersDash/.env.local')
 
 # Telegram API credentials
 API_ID = os.getenv('API_ID')
