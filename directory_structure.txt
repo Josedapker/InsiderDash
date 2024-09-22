@@ -1,0 +1,51 @@
+.
+├── config
+│   ├── next.config.js
+│   ├── postcss.config.js
+│   └── tailwind.config.js
+├── data
+│   ├── tgInsiders.json
+│   ├── tgInsiders_parsed.json
+│   ├── tgInsiders_parsed_fixed.json
+│   └── tgInsiders_raw.json
+├── directory_structure.txt
+├── next-env.d.ts
+├── package-lock.json
+├── package.json
+├── public
+│   └── favicon.ico
+├── scripts
+│   ├── fetch-trades.py
+│   ├── fixBS.py
+│   └── test-geckoterminal-api.js
+├── src
+│   ├── app
+│   │   ├── globals.css
+│   │   ├── layout.tsx
+│   │   └── page.tsx
+│   ├── components
+│   │   ├── TradeCard.tsx
+│   │   ├── TradeDashboard.tsx
+│   │   ├── TradeDashboard1.tsx
+│   │   └── ui
+│   │       ├── badge.tsx
+│   │       ├── button.tsx
+│   │       ├── card.tsx
+│   │       └── dialog.tsx
+│   ├── lib
+│   │   └── utils.ts
+│   ├── pages
+│   │   └── api
+│   │       ├── chart-data.js
+│   │       ├── ohlcv.js
+│   │       ├── pools.js
+│   │       └── trades.ts
+│   ├── styles
+│   │   └── tailwind.css
+│   ├── types
+│   │   └── radix-ui__react-dialog.d.ts
+│   └── types.ts
+├── tsconfig.json
+└── yarn.lock
+
+14 directories, 35 files

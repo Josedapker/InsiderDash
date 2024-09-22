@@ -1,0 +1,47 @@
+{
+  "name": "insidersdashboard",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@radix-ui/react-dialog": "^1.1.1",
+    "@radix-ui/react-slot": "^1.1.0",
+    "@types/node": "^22.5.5",
+    "@types/node-fetch": "^2.6.11",
+    "@types/react": "^18.3.8",
+    "apexcharts": "^3.53.0",
+    "axios": "^1.7.7",
+    "chart.js": "^4.4.4",
+    "class-variance-authority": "^0.7.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.0",
+    "fs": "^0.0.1-security",
+    "http-proxy-middleware": "^3.0.2",
+    "lucide-react": "^0.445.0",
+    "next": "^14.2.13",
+    "node-fetch": "^3.3.2",
+    "react": "^18.3.1",
+    "react-apexcharts": "^1.4.1",
+    "react-chartjs-2": "^5.2.0",
+    "react-dom": "^18.3.1",
+    "react-markdown": "^9.0.1",
+    "tailwind-merge": "^2.5.2",
+    "typescript": "^5.6.2"
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.47",
+    "tailwindcss": "^3.4.12"
+  }
+}
