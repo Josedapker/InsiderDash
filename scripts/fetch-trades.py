@@ -11,6 +11,7 @@ from datetime import datetime
 from dotenv import load_dotenv
 import re
 from telethon.tl.types import MessageEntityTextUrl
+from telethon.errors import RPCError
 
 # Load environment variables from .env.local
 load_dotenv('/Users/jose/Desktop/ExperimentalScripts/NEW/InsidersDash/.env.local')
@@ -25,11 +26,11 @@ BOT_USERNAME = '@ray_black_bot'
 client = TelegramClient('user_session', API_ID, API_HASH)
 
 # File to store the messages
-JSON_FILE = '/Users/jose/Desktop/ExperimentalScripts/NEW/InsidersDashboard/data/tgInsiders.json'
+JSON_FILE = '/Users/jose/Desktop/ExperimentalScripts/NEW/InsidersDash/data/tgInsiders.json'
 
 # Update the file paths
-RAW_DATA_FILE = '/Users/jose/Desktop/ExperimentalScripts/NEW/InsidersDashboard/data/tgInsiders_raw.json'
-PARSED_DATA_FILE = '/Users/jose/Desktop/ExperimentalScripts/NEW/InsidersDashboard/data/tgInsiders_parsed.json'
+RAW_DATA_FILE = '/Users/jose/Desktop/ExperimentalScripts/NEW/InsidersDash/data/tgInsiders_raw.json'
+PARSED_DATA_FILE = '/Users/jose/Desktop/ExperimentalScripts/NEW/InsidersDash/data/tgInsiders_parsed.json'
 
 def append_to_json(data, file_path):
     try:
@@ -60,43 +61,75 @@ def append_to_json(data, file_path):
         print(f"Error appending to JSON: {e}")
 
 def parse_trade_message(message, entities):
+    # Determine the action type
     action_match = re.search(r'(🟢 BUY|🔴 SELL|💸 TRANSFER|🔁 SWAP)', message)
     action = action_match.group(1) if action_match else None
-    token_platform_match = re.search(r'(🟢 BUY|🔴 SELL|💸 TRANSFER|🔁 SWAP)\s+(\w+)(?:\s+on\s+(\w+\s*\w*))?', message)
-    token = token_platform_match.group(2) if token_platform_match else None
-    platform = token_platform_match.group(3) if token_platform_match and token_platform_match.group(3) else None
 
-    wallet_match = re.search(r'🔹\s+(.+)', message)
+    # Extract wallet name
+    wallet_match = re.search(r'🔹\s+(\w+)', message)
     wallet = wallet_match.group(1) if wallet_match else None
 
-    details_match = re.search(r'🔹.+\n\n🔹.+\s+(swapped.+|transferred.+)', message)
-    details = details_match.group(1) if details_match else None
+    # Extract token and platform for BUY and SELL actions
+    if action in ["🟢 BUY", "🔴 SELL"]:
+        token_platform_match = re.search(r'(?:🟢 BUY|🔴 SELL)\s+(\w+)(?:\s+on\s+(\w+\s*\w*))?', message)
+        token = token_platform_match.group(1) if token_platform_match else None
+        platform = token_platform_match.group(2) if token_platform_match and token_platform_match.group(2) else None
+    else:
+        token = None
+        platform = None
 
+    # Extract the main trade details
+    details_match = re.search(r'🔹.+?\s+(swapped.+?|transferred.+?)(?=\n📈|\n✊|\n\n🔗|\Z)', message, re.DOTALL)
+    details = details_match.group(1).strip() if details_match else None
+
+    # Extract additional information
     holdings_match = re.search(r'✊Holds:\s+(.+)', message)
     holdings = holdings_match.group(1) if holdings_match else None
 
     pnl_match = re.search(r'📈PnL:\s+(.+)', message)
     pnl = pnl_match.group(1) if pnl_match else None
 
-    mc_seen_match = re.search(r'🔗.+\|\s*MC:\s*([^|]+)\s*\|\s*Seen:\s*([^:]+)', message)
-    market_cap = mc_seen_match.group(1).strip() if mc_seen_match else None
-    seen_time = mc_seen_match.group(2).strip() if mc_seen_match else None
+    # Updated market cap extraction
+    mc_match = re.search(r'MC:\s*\$?([\d.]+[KMB]?)(?:\s*:\s*BE)?', message)
+    market_cap = mc_match.group(1) if mc_match else None
 
+    # Updated seen time extraction
+    seen_match = re.search(r'Seen:\s*([\w\s]+?)(?:\s*:\s*BE)?\s*\|', message)
+    seen_time = seen_match.group(1).strip() if seen_match else None
+
+    # Extract links and contract (existing code)
     links = {}
-    link_section = re.search(r'🔗(.+?)(?:\n|$)', message)
-    if link_section:
-        link_text = link_section.group(1).strip()
-        link_parts = link_text.split('|')
-        if len(link_parts) > 1:
-            links_string = link_parts[1].strip()
-            link_names = [name.strip() for name in links_string.split(':')]
-            for entity in entities:
-                if isinstance(entity, MessageEntityTextUrl):
-                    entity_text = message[entity.offset:entity.offset + entity.length].strip()
-                    if entity_text in link_names:
-                        links[entity_text] = entity.url
-
-    contract_match = re.search(r'\n([a-zA-Z0-9]{32,})\s*$', message)
+    for entity in entities:
+        if isinstance(entity, MessageEntityTextUrl):
+            entity_text = message[entity.offset:entity.offset + entity.length].strip()
+            url = entity.url
+            
+            if 'solscan.io/tx/' in url:
+                links['Transaction'] = url
+            elif 'solscan.io/account/' in url:
+                links['Wallet'] = url
+            elif 'solscan.io/token/' in url:
+                if entity_text.lower() == 'sol':
+                    links['SOL'] = url
+                else:
+                    links['Token'] = url
+            elif 'birdeye.so/token/' in url:
+                links['Birdeye'] = url
+            elif 'dexscreener.com/' in url:
+                links['DexScreener'] = url
+            elif 'dextools.io/' in url:
+                links['DexTools'] = url
+            elif 'photon-sol.tinyastro.io/' in url:
+                links['Photon'] = url
+            elif 'bullx.io/' in url:
+                links['Bullx'] = url
+            elif 'pump.fun/' in url:
+                links['Pump'] = url
+            else:
+                links[entity_text] = url
+    
+    # Updated contract extraction
+    contract_match = re.search(r'\n([A-Za-z0-9]{32,}(?:pump)?)\s*$', message.strip())
     contract = contract_match.group(1) if contract_match else None
 
     return {
@@ -123,7 +156,7 @@ async def handle_new_message(event):
     # Save raw data
     raw_data = {
         "message": message,
-        "entities": [{"offset": e.offset, "length": e.length, "type": type(e).__name__} for e in (entities or [])],
+        "entities": [{"offset": e.offset, "length": e.length, "type": type(e).__name__, "url": e.url if hasattr(e, 'url') else None} for e in (entities or [])],
         "timestamp": datetime.now().isoformat()
     }
     append_to_json(raw_data, RAW_DATA_FILE)
@@ -151,11 +184,19 @@ async def handle_new_message(event):
         print("---")
 
 async def main():
-    await client.start(phone=PHONE_NUMBER)
-    print(f"Client started. Listening for messages from {BOT_USERNAME}...")
-    print(f"Raw data will be saved to {RAW_DATA_FILE}")
-    print(f"Parsed data will be saved to {PARSED_DATA_FILE}")
-    await client.run_until_disconnected()
+    try:
+        await client.start(phone=PHONE_NUMBER)
+        print(f"Client started. Listening for messages from {BOT_USERNAME}...")
+        print(f"Raw data will be saved to {RAW_DATA_FILE}")
+        print(f"Parsed data will be saved to {PARSED_DATA_FILE}")
+        await client.run_until_disconnected()
+    except RPCError as e:
+        if "UPDATE_APP_TO_LOGIN" in str(e):
+            print("The Telethon library needs to be updated. Please run 'pip install --upgrade Telethon'")
+        else:
+            print(f"An RPC error occurred: {e}")
+    except Exception as e:
+        print(f"An error occurred: {e}")
 
 if __name__ == '__main__':
     asyncio.run(main())

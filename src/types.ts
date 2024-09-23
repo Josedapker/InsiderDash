@@ -10,9 +10,26 @@ export interface Trade {
     market_cap?: string;
     seen_time?: string;
     links: {
-        [key: string]: string;
+        Transaction: string;
+        Wallet: string;
+        Token: string;
+        Birdeye?: string;
+        DexScreener?: string;
+        DexTools?: string;
+        Photon?: string;
+        Bullx?: string;
+        Pump?: string;
+        [key: string]: string | undefined;
     };
     contract?: string;
     original_text: string;
+    poolAddress?: string; // Add this line
     // Add any other fields that are present in your parsed data
+}
+
+export interface ChartData {
+    chartData: {
+        series: Array<{ data: Array<{ x: number; y: number[] }> }>;
+    };
+    chartOptions: any; // You can define a more specific type for options if needed
 }

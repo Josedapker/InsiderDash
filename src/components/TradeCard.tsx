@@ -1,98 +1,123 @@
 import React from 'react';
 
-import { Trade } from '@/types';
+import dynamic from 'next/dynamic';
+
+import {
+  ChartData,
+  Trade,
+} from '@/types';
+
+const Chart = dynamic(() => import('react-apexcharts'), { ssr: false });
 
 interface TradeCardProps {
   trade: Trade;
-  onCopyClick: () => void;
-  copySuccess: string;
+  chartData?: ChartData;
+  showChart: boolean;
 }
 
-const formatDate = (timestamp: string) => {
-  const date = new Date(timestamp);
-  return date.toLocaleString('en-US', {
-    month: 'numeric',
-    day: 'numeric',
-    year: 'numeric',
-    hour: 'numeric',
-    minute: 'numeric',
-    hour12: true
-  });
-};
+const TradeCard: React.FC<TradeCardProps> = ({ trade, chartData, showChart }) => {
+  console.log('Trade object:', JSON.stringify(trade, null, 2));
+  console.log('Chart data:', JSON.stringify(chartData, null, 2));
 
-const renderEmoji = (action: string | null | undefined) => {
-  if (!action) return ''; // Return an empty string or a default emoji if action is null or undefined
-  if (action.includes('BUY')) return '🟢';
-  if (action.includes('SELL')) return '🔴';
-  if (action.includes('TRANSFER')) return '💸';
-  if (action.includes('SWAP')) return '🔁';
-  return ''; // Default case
-};
+  const formattedDate = new Date(trade.timestamp).toLocaleString();
 
-const TradeCard: React.FC<TradeCardProps> = ({ trade, onCopyClick, copySuccess }) => {
-  const {
-    timestamp,
-    action,
-    token,
-    platform,
-    wallet,
-    details,
-    holdings,
-    pnl,
-    market_cap,
-    seen_time,
-    links,
-    contract,
-  } = trade;
+  const linkAbbreviations = {
+    BE: 'Birdeye',
+    DS: 'DexScreener',
+    DT: 'DexTools',
+    PH: 'Photon',
+    Bullx: 'Bullx',
+    Pump: 'Pump'
+  };
 
-  const formattedDate = formatDate(timestamp);
+  // Function to safely clean up the details
+  const cleanDetails = (details: string | undefined | null): string => {
+    if (!details) return '';
+    
+    // Remove link abbreviations and "|"
+    const abbreviations = Object.keys(linkAbbreviations).join('|');
+    const regex = new RegExp(`\\s*(${abbreviations}|\\|)\\s*`, 'g');
+    let cleaned = details.replace(regex, '').trim();
+    
+    // Remove "🔗 tokenName" pattern before "MC:"
+    cleaned = cleaned.replace(/🔗\s*[^:]+(?=\s*MC:)/g, '');
+    // Add spaces around contract address (assuming it's a 32-44 character alphanumeric string ending with 'pump')
+    cleaned = cleaned.replace(/([a-zA-Z0-9]{31,43}pump)\b/, ' $1 ');
+    // Add a space after the "K" in the MC value and remove the colon before the contract address
+    cleaned = cleaned.replace(/K:/, 'K ').replace(/: ([a-zA-Z0-9]{31,43}pump)\b/, ' $1');
+    
+    
+    return cleaned;
+  };
+
+  const getActionColor = (action: string | null | undefined) => {
+    if (!action) return 'text-gray-500'; // Default color if action is null or undefined
+    if (action.includes('SELL')) return 'text-red-500';
+    if (action.includes('BUY')) return 'text-green-500';
+    if (action.includes('TRANSFER') || action.includes('SWAP')) return 'text-blue-500';
+    return 'text-gray-500'; // Default color for any other action
+  };
 
   return (
-    <div className="bg-gray-800 p-4 rounded-lg shadow relative flex">
-      <div className="flex-1">
-        <div className="flex items-center mb-2">
-          <span className="text-2xl mr-2">{renderEmoji(action)}</span>
-          <span className={`font-bold ${
-            action?.includes('SELL') ? 'text-red-500' : 
-            action?.includes('BUY') ? 'text-green-500' : 
-            action?.includes('TRANSFER') ? 'text-yellow-500' : 
-            'text-blue-500'
-          }`}>
-            {action?.replace(/🟢|🔴|💸|🔁/, '').trim() || 'Unknown Action'}
-          </span>
-        </div>
-        <p className="font-bold text-lg">{token} {platform}</p>
-        <p className="text-blue-400">{wallet}</p>
-        <p className="text-gray-300">{details}</p>
-        {holdings && <p className="text-yellow-500">✊Holds: {holdings}</p>}
-        {pnl && <p className={pnl.includes('+') ? 'text-green-500' : 'text-red-500'}>📈PnL: {pnl}</p>}
-        {(market_cap || seen_time) && (
-          <p className="text-gray-400">
-            {market_cap && `MC: ${market_cap}`}
-            {seen_time && ` | Seen: ${seen_time}`}
+    <div className="bg-gray-800 p-4 rounded-lg shadow-md mb-4">
+      <div className="flex justify-between items-start">
+        <div className="flex-1">
+          <div className="flex items-center mb-2">
+            <span className={`text-2xl mr-2 ${getActionColor(trade.action)}`}>
+              {trade.action || 'Unknown Action'}
+            </span>
+            <a href={trade.links?.Token} target="_blank" rel="noopener noreferrer" className="font-bold text-xl hover:underline">
+              {trade.token || 'Unknown Token'}
+            </a>
+            <span className="text-sm ml-2 text-gray-400">{trade.platform}</span>
+          </div>
+          <a href={trade.links?.Wallet} target="_blank" rel="noopener noreferrer" className="text-blue-400 text-lg mb-2 hover:underline">
+            {trade.wallet || 'Unknown Wallet'}
+          </a>
+          <p className="text-gray-300 mb-2">{trade.details}</p>
+          {trade.holdings && <p className="text-yellow-500 mb-2">{trade.holdings}</p>}
+          {trade.pnl && <p className={`mb-2 ${trade.pnl.includes('+') ? 'text-green-500' : 'text-red-500'}`}>{trade.pnl}</p>}
+          <p className="text-gray-400 mb-2">
+            {trade.market_cap && `MC: $${trade.market_cap}`}
+            {trade.seen_time && ` | Seen: ${trade.seen_time}`}
           </p>
-        )}
-        {links && (
-          <div className="mt-2">
-            <p className="text-gray-300">Links:</p>
+          {trade.contract && <p className="text-xs text-gray-500 mb-2">{trade.contract}</p>}
+          {trade.links && (
             <div className="flex flex-wrap gap-2">
-              {Object.entries(links).map(([key, value]) => (
-                <a key={key} href={value} target="_blank" rel="noopener noreferrer" className="text-blue-400 text-sm">
-                  {key}
-                </a>
+              {Object.entries(trade.links).map(([key, value]) => (
+                key !== 'Transaction' && key !== 'Wallet' && key !== 'Token' && (
+                  <a
+                    key={key}
+                    href={value}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-400 hover:underline text-sm"
+                  >
+                    {key}
+                  </a>
+                )
               ))}
             </div>
+          )}
+        </div>
+        {showChart && (
+          <div className="w-1/3">
+            {chartData ? (
+              <Chart
+                options={chartData.chartOptions}
+                series={chartData.chartData.series}
+                type="candlestick"
+                height={200}
+              />
+            ) : (
+              <div className="bg-gray-700 p-4 rounded-lg text-center">
+                <p className="text-gray-400">Loading chart...</p>
+              </div>
+            )}
           </div>
         )}
-        {contract && <p className="text-xs text-gray-500 mt-2">{contract}</p>}
-        <span className="text-sm text-gray-400 absolute bottom-2 right-2">{formattedDate}</span>
       </div>
-      <div className="w-1/3 flex items-center justify-center">
-        {/* Placeholder for chart */}
-        <div className="bg-gray-700 p-4 rounded-lg text-center">
-          <p className="text-gray-400">No chart available</p>
-        </div>
-      </div>
+      <p className="text-xs text-gray-500 mt-2">{formattedDate}</p>
     </div>
   );
 };
